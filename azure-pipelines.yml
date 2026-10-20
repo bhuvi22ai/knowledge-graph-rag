@@ -1,0 +1,49 @@
+
+# Run the pipeline whenever code is pushed to main
+trigger:
+  - main
+
+# Use a Microsoft-hosted Ubuntu machine
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+  # Select Python 3.12
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.12'
+      addToPath: true
+    displayName: 'Set up Python 3.12'
+
+  # Install the project's dependencies
+  - script: |
+      python -m pip install --upgrade pip
+      python -m pip install -r requirements.txt
+    displayName: 'Install Python dependencies'
+
+  # Check that both Python files have valid syntax
+  - script: |
+      python -m compileall -q app.py setup_graph.py
+    displayName: 'Check Python syntax'
+
+  # Copy the safe application files into an artifact folder
+  - task: CopyFiles@2
+    inputs:
+      SourceFolder: '$(Build.SourcesDirectory)'
+      Contents: |
+        app.py
+        setup_graph.py
+        requirements.txt
+        README.md
+        .env.example
+        .gitignore
+      TargetFolder: '$(Build.ArtifactStagingDirectory)/KnowledgeGraphRAG'
+    displayName: 'Prepare application artifact'
+
+  # Publish the files for download from the pipeline run
+  - task: PublishPipelineArtifact@1
+    inputs:
+      targetPath: '$(Build.ArtifactStagingDirectory)/KnowledgeGraphRAG'
+      artifact: 'knowledge-graph-rag'
+      publishLocation: 'pipeline'
+    displayName: 'Publish pipeline artifact'
